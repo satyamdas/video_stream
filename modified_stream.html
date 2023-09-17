@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>USB Camera Stream</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        #videoElement {
+            width: 100%;
+            max-width: 640px;
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #333;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        a {
+            color: #333;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>USB Camera Stream</h1>
+    <video id="videoElement" autoplay></video>
+    <br>
+    <button id="startButton">Start Streaming</button>
+    <button id="stopButton">Stop Streaming</button>
+    <br>
+    <button id="recordButton" disabled>Start Recording</button>
+    <button id="stopRecordButton" disabled>Stop Recording</button>
+    <br>
+    <a id="downloadLink" style="display: none">Download Video</a>
+
+    <script>
+        const videoElement = document.getElementById('videoElement');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const recordButton = document.getElementById('recordButton');
+        const stopRecordButton = document.getElementById('stopRecordButton');
+        const downloadLink = document.getElementById('downloadLink');
+
+        let mediaStream;
+        let mediaRecorder;
+        let chunks = [];
+
+        async function startStreaming() {
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = mediaStream;
+                recordButton.disabled = false;
+            } catch (error) {
+                console.error('Error accessing the camera:', error);
+            }
+        }
+
+        function stopStreaming() {
+            const tracks = mediaStream.getTracks();
+            tracks.forEach(track => track.stop());
+            videoElement.srcObject = null;
+            recordButton.disabled = true;
+            stopRecordButton.disabled = true;
+        }
+
+        function startRecording() {
+            mediaRecorder = new MediaRecorder(mediaStream);
+            mediaRecorder.ondataavailable = function(event) {
+                if (event.data.size > 0) {
+                    chunks.push(event.data);
+                }
+            };
+            mediaRecorder.start();
+            startButton.disabled = true;
+            stopButton.disabled = true;
+            recordButton.disabled = true;
+            stopRecordButton.disabled = false;
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            startButton.disabled = false;
+            stopButton.disabled = false;
+            recordButton.disabled = false;
+            stopRecordButton.disabled = true;
+
+            const blob = new Blob(chunks, { type: 'video/webm' });
+            chunks = [];
+            const url = window.URL.createObjectURL(blob);
+            downloadLink.href = url;
+            downloadLink.style.display = 'block';
+            downloadLink.download = 'recorded-video.webm';
+        }
+
+        startButton.addEventListener('click', startStreaming);
+        stopButton.addEventListener('click', stopStreaming);
+        recordButton.addEventListener('click', startRecording);
+        stopRecordButton.addEventListener('click', stopRecording);
+    </script>
+</body>
+</html>
+
